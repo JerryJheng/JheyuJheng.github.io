@@ -1,0 +1,374 @@
+<!DOCTYPE HTML>
+<!--
+	Massively by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+	<head>
+		<title>Apartment Rent in Taoyuan City, Taiwan</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="assets/css/main.css" />
+		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+	</head>
+	<body class="is-preload">
+
+		<!-- Wrapper -->
+			<div id="wrapper">
+
+				<!-- Header -->
+					<header id="header">
+						<a href="index.html" class="logo">Jhe-Yu Jheng</a>
+					</header>
+
+				<!-- Nav -->
+					<nav id="nav">
+						<ul class="links">
+							<li><a href="index.html">Portfolio</a></li>
+							<li class="active"><a>Apartment Rent in Taoyuan City, Taiwan</a></li>
+						</ul>
+						<ul class="icons">
+							<li><a href="https://github.com/JerryJheng" class="icon brands fa-github"><span class="label">GitHub</span></a></li>
+						</ul>
+					</nav>
+
+				<!-- Main -->
+					<div id="main">
+
+						<!-- Post -->
+<section class="post">
+								<header class="major">
+									<h1>Apartment Rent<br />
+									in Taoyuan City, Taiwan</h1>
+									<p>" As the outbreak of the pandemic, the housing prices in Taoyuan continued to rise. In addition to the unaffordable housing prices, young people were more inclined to rent instead of taking out loans. Being a native, I am thus curious about the housing rent in Taoyuan. "</p>
+								</header>
+								<div class="image main"><img src="images/cover_rent_in_TYC.jpg" alt="" /></div>
+								<p>This project was performed to predict prices of renting an apartment in Tauyuan City, Taiwan, using supervised machine learning techniques. The dataset was collected from the website of Ministry of the Interior, Taiwan, ranging from 2020 S1 to 2022 S2. After data cleaning, the dataset remains 10718 observations.
+									<br/>Data source: <a href="https://plvr.land.moi.gov.tw/DownloadOpenData">https://plvr.land.moi.gov.tw/DownloadOpenData</a></p>
+								<!--Data Cleaning-->
+								<h2>Data cleaing</h2>
+								<p>The process was completed in MySQL.
+									Data were first imported via command lines because it was way faster and the null characters in the data might lead the Workbench to errors.
+									Then it was checked whether there were duplicates, data types were converted, some features were extracted, and so on.
+									Finally, a view was created where unnecessary data were screened out. 
+								<br/>
+								Full code: <a href="https://github.com/JerryJheng/portfolio/blob/main/rent_in_TYC_DataCleaning.sql">rent_in_TYC_DataCleaning.sql</a>
+								</p>
+								<h2>Correlation Matrix</h2>
+								<p>According to the matrix, the top three features that most correlated with the target, 'TotalPrice', are 'BuldingTotalArea', 'Toilet' (numbers of toilet) and 'Room' (numbers of room),
+									and their coefficients of correlation are much greater than the others. At the same time, the three features are also highly correlated with each others.
+									It conforms to our intuition that the bigger place, the more expensive rent. However, the other features don't seem to have promenent influence.
+
+								</p>
+								<pre><code><font color="green"><i>#import data</i></font>
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+RentData = pd.read_excel (r"C:\Users\Jheyu Jheng\Desktop\RentData.xlsx")
+<font color="green"><i>#generate correlation matrix</i></font>
+CorrM = RentData.corr()
+plt.rcParams['figure.figsize']=20,20
+plt.rcParams['figure.dpi'] = 72
+plt.rcParams['font.size'] = 14
+plt.rcParams.update({'font.family':'Times New Roman'})
+sns.heatmap(CorrM, cmap ="YlGnBu", annot=True)
+plt.title('Correlation Matrix for Features',fontsize=30)
+plt.show()</code></pre>
+								<div class="image main"><img src="images/rent_in_TYC/rent_in_TYC_cm.png"/></div>
+								<!--feature selection-->
+								<h2>Feature selection</h2>
+								<p>
+								Adjustments were made on features (new ones were added and categorical values were converted into one-hot encodings), and then, 48 of them were selected for modeling.
+								</p>
+								<pre><code><font color="green"><i>#add features from 'TransactionDate'</i></font>
+<font color="green"><i>#first change object to datetime</i></font>
+RentData.TransactionDate = pd.to_datetime(RentData.TransactionDate)
+<font color="green"><i>#extract month, day_of_month features</i></font>
+TD_months = RentData.TransactionDate.dt.month
+TD_day_of_months = RentData.TransactionDate.dt.day
+<font color="green"><i>#extract day name and convert it into one-hot encoding</i></font>
+td_to_one_hot= RentData.TransactionDate.dt.day_name()
+days=pd.get_dummies(td_to_one_hot)
+<font color="green"><i>#convert other categorical features into one-hot encoding</i></font>
+District=pd.get_dummies(RentData.District)
+District.columns=['Zhongli District', 'Bade District','Dayuan District','Daxi District',
+	'Pingzhen District','Xinwu District','Taoyuan District','Yangmei District',
+	'Luzhu District','Guanyin District','Longtan District','Guishan District']
+UsingZone=pd.get_dummies(RentData.UsingZone)
+UsingZone.columns=['Metropolis area','Specific agricultural area','Industrial area',
+	'General agricultural area', 'Rural area','Specific dedicated area',
+	'Hillside land conservation area']
+Lift=pd.get_dummies(RentData.Lift)
+Lift.columns=['Lift_yes','Lift_no','Lift_notsure']
+Socialhousing=pd.get_dummies(RentData.Socialhousing)
+Socialhousing.columns=['Socialhousing','notSocialhousing']
+FurnitureProvided=pd.get_dummies(RentData.FurnitureProvided)
+FurnitureProvided.columns=['FurnitureProvided','FurnitureNotProvided']
+ManagingOrg=pd.get_dummies(RentData.ManagingOrg)
+ManagingOrg.columns=['ManagingOrg','noManagingOrg']</code></pre>
+								<pre><code><font color="green"><i>#Select features</i></font>
+features = pd.DataFrame({
+		'AgeOfBuilding':RentData.AgeOfBuilding,
+		'TransactionYear':RentData.TransactionYear, 
+		'BuiltYear':RentData.BuiltYear,
+		'TransactionMonth':TD_months,
+		'TransactionDay':TD_day_of_months,
+		'BuildingTotalArea':RentData.BuildingTotalArea,
+		'Floor':RentData.Floor,
+		'BerthNum':RentData.BerthNum,
+		'BuildingNum':RentData.BuildingNum,
+		'Room':RentData.Room, 
+		'Hall':RentData.Hall,
+		'Toilet':RentData.Toilet, 
+		'PricePerSquareMeter':RentData.PricePerSquareMeter
+})
+<font color="green"><i>#concatenate one-hot encoding features</i></font>
+features=pd.concat([
+		features,
+		days,
+		District,
+		UsingZone,
+		Lift,
+		Socialhousing,
+		FurnitureProvided,
+		ManagingOrg
+],axis=1)</code></pre>
+
+								<h2>Modeling</h2>
+								<p>In this section, two approaches were practiced to model the data, which are: <br/> 
+									(1) a multiple linear regression model (full code: <a href="https://github.com/JerryJheng/portfolio/blob/main/rent_in_TYC_LinearRegression.py">rent_in_TYC_LinearRegression.py</a>), and<br/>
+									(2) a fully-conected neural network (full code: <a href="https://github.com/JerryJheng/portfolio/blob/main/rent_in_TYC_NN.py">rent_in_TYC_NN.py</a>).</p>
+								
+									<h3>Linear Regression</h3>
+								<p>
+										To begin with, data were randomly split into training set and testing set. 
+										Afterwards, a linear regression model was invoked and fitted with the training set.
+								</p><pre><code>from sklearn.model_selection import train_test_split
+<font color="green"><i>#Split data set</i></font>
+x= features
+y= RentData['TotalPrice']
+x_train, x_test, y_train, y_test=train_test_split(x,y,test_size=0.25,random_state = 439)
+<font color="green"><i>#Fit the model</i></font>
+mlr= LinearRegression()
+<font color="green"><i># or using other models like: mlr=ElasticNet(alpha=0.01)</i></font>
+<font color="green"><i># mlr=Ridge(alpha=0.1,tol=0.00001,solver="svd")</i></font>
+mlr.fit(x_train,y_train)</code></pre><p>
+									The parameters are shown as: <br/>
+									&emsp;&emsp;Intercept:  -580278.0034924971<br/>
+									&emsp;&emsp;Coefficients:<br/>
+									&emsp;&emsp;1 ('AgeOfBuilding', -35.839734240168966)<br/>
+									&emsp;&emsp;2 ('TransactionYear', 282.13757115582627)<br/>
+									&emsp;&emsp;3 ('BuiltYear', -0.5874884868793369)<br/>
+									&emsp;&emsp;4 ('TransactionMonth', 45.738962360397124)<br/>
+									&emsp;&emsp;5 ('TransactionDay', -2.058468163800605)<br/>
+									&emsp;&emsp;6 ('BuildingTotalArea', 135.96872545558023)<br/>
+									&emsp;&emsp;(skipped)<br/>
+</p><pre><code><font color="green"><i>#Show result</i></font>
+print("Intercept: ", mlr.intercept_)
+print("Coefficients:")
+	for i in range(len(list(zip(x,mlr.coef_)))):
+		   print(i+1,list(zip(x,mlr.coef_))[i])</code></pre>
+		   <p>The model above was used to predict on the testing set, and then evaluated with r squared and Root Mean Squared Error (RMSE).
+			The result is apparently not satisfying:
+			the Mean Absolute Error is almost 2000 (NTD) and the RMSE is about 3272.
+			Take the data below as example, the error (index=4328) is almost 40% of the actual price, which seems to be an extreme value yet it is not an exception in the testing set.
+			And causiously speaking, even 2000 NTD is considerable to both tenant and house owner.
+		</p>
+		   <pre><code><font color="green"><i>#Predict on the testing set</i></font>
+y_pred_mlr = mlr.predict(x_test)
+print("Prediction for test set: {}".format(y_pred_mlr))
+mlr_diff = pd.DataFrame({'Actual value': y_test,'Predict Value':y_pred_mlr})
+mlr_diff.head()
+mlr_diff.tail()</code></pre>
+		   <!--predict table-->
+		   <div class="table-wrapper">
+			<table class="alt">
+				<thead>
+					<tr>
+						<th>index</th>
+						<th>Actual value</th>
+						<th>Predict value</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>1177</td>
+						<td>16000</td>
+						<td>15041.145358</td>
+					</tr>
+					<tr>
+						<td>6199</td>
+						<td>12000</td>
+						<td>9152.186273</td>
+					</tr>
+					<tr>
+						<td>4328</td>
+						<td>23000</td>
+						<td>23964.651365</td>
+					</tr>
+					<tr>
+						<td>127</td>
+						<td>13300</td>
+						<td>19325.275885</td>
+					</tr>
+					<tr>
+						<td>6165</td>
+						<td>10000</td>
+						<td>10255.608988</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+		<pre><code>from sklearn import metrics
+import numpy as np
+<font color="green"><i>#Evaluate the model</i></font>
+meanAbErr = metrics.mean_absolute_error(y_test, y_pred_mlr)
+meanSqErr = metrics.mean_squared_error(y_test, y_pred_mlr)
+rootMeanSqErr = np.sqrt(metrics.mean_squared_error(y_test, y_pred_mlr))
+print('R squared: {:.2f}'.format(mlr.score(x,y)*100))
+print('Mean Absolute Error:', meanAbErr)
+print('Mean Squared Error:', meanSqErr)
+print('Root Mean Squared Error:', rootMeanSqErr)</code></pre>
+									<!--Code feature importance-->
+								<pre><code><font color="green"><i>#show feature importance</i></font>
+plt.rcParams['font.size'] = 14
+(pd.Series(abs(mlr.coef_), index=x.columns)
+	.nsmallest(len(mlr.coef_))
+	.plot(kind='barh')) 
+plt.title('Feature Importance',fontsize=30)
+plt.show()</code></pre>
+								<p>Feature importance (in absolute value) is represented as follow.</p>	
+								<div class="image main"><img src="images/rent_in_TYC/rent_in_TYC_fi.png"/></div>
+								<h3>Neural Network</h3>	
+								A neural network was trained for a better prediction. 
+								The model contains 6 fully-connect layers, taking ReLU functions as activation functions, 
+								Mean Squared Error as the loss function,and "Adam", which may implement a stochastic gradient descent, as optimizer.
+							<pre><code>from keras.models import Sequential
+from keras.layers import Dense, Dropout
+import tensorflow as tf
+model = Sequential([
+	Dense(144, input_dim=48, activation= "relu"),
+	Dense(96, activation= "relu"),
+	Dense(48, activation= "relu"),
+	Dense(24, activation= "relu"),
+	Dense(12, activation= "relu"),
+	Dense(1)
+])
+
+from keras import backend as K
+
+def coeff_determination(y_true, y_pred):
+	SS_res =  K.sum(K.square( y_true-y_pred ))
+	SS_tot = K.sum(K.square( y_true - K.mean(y_true) ) )
+	return ( 1 - SS_res/(SS_tot + K.epsilon()) )
+								
+model.compile(loss= "mean_squared_error" , optimizer="adam", metrics=["mean_squared_error",coeff_determination])
+model.summary()</code></pre>
+<p>Train the model.</P>
+<pre><code>model.fit(x_train, y_train, epochs=500)</code></pre>
+<p>Predict on the data and evaluate the model.</p>
+<pre><code>from math import sqrt
+from sklearn.metrics import mean_squared_error
+pred_train= model.predict(x_train)
+<font color="green"><i>#RMSE_train(1955.9773885710715)</i></font>
+print(np.sqrt(mean_squared_error(y_train,pred_train)))
+pred= model.predict(x_test)
+<font color="green"><i>#RMSE_test(1743.3672819113883)</i></font>
+print(np.sqrt(mean_squared_error(y_test,pred))) 
+<font color="green"><i>#r^2_test(=0.8632)</i></font>
+r_squared_score_test=model.evaluate(x_test,y_test) #r^2(test)=0.8689
+<font color="green"><i>#r^_all_data(=0.9411)</i></font>
+r_squared_score_all=model.evaluate(x,y) </code></pre>
+<p>As the result, the current model is scored better than the previous one (RMSE: 1743 < 3272; r squared: 0.9411 > 0.8977).
+				The following table is the comparasion of the two model's prediction on the former examples.</p>
+				<table class="alt">
+					<thead>
+						<tr>
+							<th>index</th>
+							<th>Actual value</th>
+							<th>Linear Regression</th>
+							<th>Neural Network</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td>1177</td>
+							<td>16000</td>
+							<td>16290.490813</td>
+							<td>15629.420898</td>
+						</tr>
+						<tr>
+							<td>6199</td>
+							<td>12000</td>
+							<td>11293.898848</td>
+							<td>11587.029297</td>
+						</tr>
+						<tr>
+							<td>4328</td>
+							<td>23000</td>
+							<td>14277.54268</td>
+							<td>22544.953125</td>
+						</tr>
+						<tr>
+							<td>127</td>
+							<td>13300</td>
+							<td>14050.993177</td>
+							<td>13730.770508</td>
+						</tr>
+						<tr>
+							<td>6165</td>
+							<td>10000</td>
+							<td>11228.141028</td>
+							<td>9947.096680</td>
+						</tr>
+					</tbody>
+				</table>
+				<h2>Conclusion</h2>
+				<p>In this project, two models, multiple linear regression and neural network, were built considering various features,
+					and between them, the neural network provided more preferable prediction of the rents of apartments in Taoyuan City, Taiwan.
+					Although it remains technical details to be improved, the current neural network is quite worthy of reference for those who want to rent an appartment.
+				</p>			
+			</section>
+		</div>
+
+				<!-- Footer -->
+				<footer id="footer">
+					<section class="split contact">
+						<section>
+							<h3>Email</h3>
+							<p><a>jheyujheng@gmail.com</a></p>
+						</section>
+						<section>
+							<h3>Social</h3>
+							<ul class="icons alt">
+								<li><a href="https://github.com/JerryJheng" class="icon brands alt fa-github"><span class="label">GitHub</span></a></li>
+							</ul>
+						</section>
+					</section>
+				</footer>
+
+				<!-- Copyright -->
+<!-- 					<div id="copyright">
+						<ul><li>&copy; Untitled</li><li>Design: <a href="https://html5up.net">HTML5 UP</a></li></ul>
+					</div> -->
+
+			</div>
+
+		<!-- Scripts -->
+			<script src="assets/js/jquery.min.js"></script>
+			<script src="assets/js/jquery.scrollex.min.js"></script>
+			<script src="assets/js/jquery.scrolly.min.js"></script>
+			<script src="assets/js/browser.min.js"></script>
+			<script src="assets/js/breakpoints.min.js"></script>
+			<script src="assets/js/util.js"></script>
+			<script src="assets/js/main.js"></script>
+
+	</body>
+
+
+
+
+
+
+	</html>
